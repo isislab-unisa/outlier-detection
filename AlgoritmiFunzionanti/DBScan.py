@@ -9,14 +9,7 @@ import numpy as np
 from sklearn import datasets
 from sklearn.cluster import DBSCAN
 
-def cluster_evaluate(cluster):
-    count=np.bincount(cluster)
-    count=np.argmax(count)
-
-    purity=np.count_nonzero(cluster==count)/np.size(cluster)
-    return purity
-
-df = pd.read_csv('..\DB\sparql',error_bad_lines=False)
+df = pd.read_csv('sparqlBirthDate',error_bad_lines=False)
 for i,row in  df.iterrows():
         row['Concept']=str(row['Concept'])
 
@@ -24,6 +17,13 @@ for i,row in  df.iterrows():
         row['Concept']=row['Concept'].replace("-","")
 
 df['ValoriNumerici']=df['Concept'].astype(np.int64)
+'''from pandas import DataFrame
+
+Cars = {'Brand': ['Honda Civic','Toyota Corolla','Ford Focus','Audi A4','a','b','c','d','e','f','g','h','i','l'],
+        'Price': [22,25000000000000000000000000,27,35,34,230000000000000000000000000000000,78,65,46,78,19,28,12,18]
+        }
+
+df = DataFrame(Cars,columns= ['Brand', 'Price'])'''
 X= df.iloc[:,1].values.reshape(-1,1)
 '''y_truth=dataset.iloc[:,4].values.reshape(-1,1)'''
 
@@ -34,10 +34,10 @@ X=norm_data.fit_transform(X)
 norm_data=MinMaxScaler()
 X=norm_data.fit_transform(X)
 
-dbscan=DBSCAN(eps=0.0007)
+dbscan=DBSCAN(eps=1.8953560136303917e-05,min_samples=2)
 
 y=dbscan.fit_predict(X)
-
+print(y)
 cluster_labels=np.unique(y)
 
 cluster=[]
