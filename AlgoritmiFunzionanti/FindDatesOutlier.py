@@ -11,10 +11,11 @@ from sklearn.cluster import DBSCAN
 import seaborn as sns
 from datetime import datetime
 def caricaDB():
-    df = pd.read_csv('..\DB\sparqlBirthDate',error_bad_lines=False,sep=",")
+    df = pd.read_csv('sparqlBirthDate',error_bad_lines=False,sep=",")
     '''df=df.iloc[:,4].values.reshape(-1,1)'''
     '''df['Concept']=df['Concept'].astype('datetime64[ns]')'''
     '''df['Concept']=pd.to_datetime(df['Concept'], infer_datetime_format=True,errors='coerce')'''
+    print(df)
     for i,row in  df.iterrows():
         row['Concept']=str(row['Concept'])
 
@@ -54,11 +55,25 @@ def outliers_modified_z_score(ys):
     median_absolute_deviation_y = np.median([np.abs(y - median_y) for y in ys])
     modified_z_scores = [0.6745 * (y - median_y) / median_absolute_deviation_y
                          for y in ys]
-    df=caricaDB()
+    df=caricaDB2()
     df["Modified-Z-Score"]=modified_z_scores
 
     return np.where(np.abs(modified_z_scores) > threshold)
 
+def caricaDB2():
+    df = pd.read_csv('queryBirthDateWikidata.csv',error_bad_lines=False,sep=",")
+    print(df)
+    for i,row in  df.iterrows():
+        row['d']=str(row['d'])
+    for i,row in  df.iterrows():
+        row['d']=row['d'].replace("-","")
+    for i,row in  df.iterrows():
+        row['d']=row['d'].replace(":","")
+    for i,row in  df.iterrows():
+        row['d']=row['d'].replace("T000000Z","")
+    df['ValoriNumerici']=df['d'].astype(np.int64)
+    sns.boxplot(x=df['ValoriNumerici'])
+    return df
 
 def outliers_iqr(ys):
     quartile_1, quartile_3 = np.percentile(ys, [25, 75])
@@ -67,22 +82,26 @@ def outliers_iqr(ys):
     upper_bound = quartile_3 + (iqr * 1.5)
     return np.where((ys > upper_bound) | (ys < lower_bound))
 
-def outliers_z_score(ys):
+def outliers_z_score(ys,df):
     threshold = 3
-
     mean_y = np.mean(ys)
     stdev_y = np.std(ys)
     z_scores = [(y - mean_y) / stdev_y for y in ys]
-    df=caricaDB()
     df["Z-Score"]=z_scores
     return np.where(np.abs(z_scores) > threshold)
 
 def stampa():
     df=caricaDB()
-    outlier_datapoints = outliers_z_score(df["ValoriNumerici"])
-    outlier_datapoints2 = outliers_modified_z_score(df["ValoriNumerici"])
-    outlier_datapoints3 = outliers_iqr(df["ValoriNumerici"])
+    outlier_datapoints = outliers_iqr(df["ValoriNumerici"])
     print("Per Z-Score",outlier_datapoints)
-    print("Per Modified Z-Score ",outlier_datapoints2)
-    print("Per IQR ",outlier_datapoints3)
-stampa()
+    return df
+
+def checkOutlier():
+    df=caricaDB2()
+    outlier_datapoints =outliers_iqr(df["ValoriNumerici"])
+    print("Per IQR",outlier_datapoints)
+    return df
+
+
+
+

@@ -11,7 +11,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 from scipy.stats import zscore
-dataset = pd.read_csv('datasetBellezza.csv',sep="";"")
+dataset = pd.read_csv('catastopassicarraichiaiasanferdinandoposillipo.csv',error_bad_lines=False,sep=";",encoding="ISO-8859-1")
 dataset=dataset.copy()
 dataset=dataset.dropna()
 from pandas import DataFrame
@@ -32,13 +32,8 @@ df2 = DataFrame(Cars,columns= ['Brand', 'Price'])
 
 print (df2)
 
-sns.boxplot(x=)
+sns.boxplot(x=dataset["Longitudine"])
 
-outlier_datapoints = outliers_iqr(df[""Price""])
-print(outlier_datapoints)
 
-outlier_datapoints =outliers_iqr(df2[""Price""])
-print(outlier_datapoints)
-
-outlier_datapoints = outliers_iqr(dataset[""Importo""])
+outlier_datapoints = outliers_iqr(dataset["Longitudine"])
 print(outlier_datapoints)

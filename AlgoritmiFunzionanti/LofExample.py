@@ -36,6 +36,9 @@ for i,row in  df.iterrows():
 
 df['ValoriNumerici']=df['Concept'].astype(np.int64)'''
 
+
+
+
 instances= df.iloc[:,6].values.reshape(-1,1)
 from sklearn.neighbors import LocalOutlierFactor
 clf = LocalOutlierFactor(n_neighbors=2, contamination=0.2)
