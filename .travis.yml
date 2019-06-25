@@ -2,4 +2,4 @@ language: python
   install:
     - pip install -r requirements.tx
   script:
-    - Test/TestLOF.py
+    - python Test/TestLOF.py
