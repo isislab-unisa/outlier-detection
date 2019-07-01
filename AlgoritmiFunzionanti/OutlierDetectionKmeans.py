@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
 
-dataset = pandas.read_csv('datasetBellezza.csv',error_bad_lines=False,sep="";"")
+dataset = pandas.read_csv('datasetBellezza.csv',error_bad_lines=False,sep=";")
 print(dataset)
 X = dataset.iloc[:,5].values.reshape(1,-1)
 print(X)
@@ -24,7 +24,7 @@ kmeans.fit(X)
 
 
 f, ax = plt.subplots(figsize=(7, 5))
-ax.set_title(""Blob"")
+ax.set_title("Blob")
 ax.scatter(X[:, 0], X[:, 1], label='Points')
 ax.scatter(kmeans.cluster_centers_[:, 0],
                kmeans.cluster_centers_[:, 1], label='Centroid',
