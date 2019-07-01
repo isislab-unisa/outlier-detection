@@ -1,168 +1,223 @@
-#!/usr/bin/python
-# -*- coding: utf8 -*-
-"""
-lof
-~~~~~~~~~~~~
-This module implements the Local Outlier Factor algorithm.
-:copyright: (c) 2013 by Damjan Kužnar.
-:license: GNU GPL v2, see LICENSE for more details.
-"""
-from __future__ import division
-import warnings
+from itertools import combinations
+from math import sqrt, inf
+from json import dumps
+from collections import OrderedDict
+from itertools import islice
+from csv import reader
 
-def distance_euclidean(instance1, instance2):
-    """Computes the distance between two instances. Instances should be tuples of equal length.
-    Returns: Euclidean distance
-    Signature: ((attr_1_1, attr_1_2, ...), (attr_2_1, attr_2_2, ...)) -> float"""
-    def detect_value_type(attribute):
-        """Detects the value type (number or non-number).
-        Returns: (value type, value casted as detected type)
-        Signature: value -> (str or float type, str or float value)"""
-        from numbers import Number
-        attribute_type = None
-        if isinstance(attribute, Number):
-            attribute_type = float
-            attribute = float(attribute)
-        else:
-            attribute_type = str
-            attribute = str(attribute)
-        return attribute_type, attribute
-    # check if instances are of same length
-    if len(instance1) != len(instance2):
-        raise AttributeError("Instances have different number of arguments.")
-    # init differences vector
-    differences = [0] * len(instance1)
-    # compute difference for each attribute and store it to differences vector
-    for i, (attr1, attr2) in enumerate(zip(instance1, instance2)):
-        type1, attr1 = detect_value_type(attr1)
-        type2, attr2 = detect_value_type(attr2)
-        # raise error is attributes are not of same data type.
-        if type1 != type2:
-            raise AttributeError("Instances have different data types.")
-        if type1 is float:
-            # compute difference for float
-            differences[i] = attr1 - attr2
-        else:
-            # compute difference for string
-            if attr1 == attr2:
-                differences[i] = 0
-            else:
-                differences[i] = 1
-    # compute RMSE (root mean squared error)
-    rmse = (sum(map(lambda x: x**2, differences)) / len(differences))**0.5
-    return rmse
+
+def get_manhattan_distance(point_a, point_b):
+    return abs(point_a['x'] - point_b['x']) + abs(point_a['y'] - point_b['y'])
+
+
+def get_euclidean_distance(point_a, point_b):
+    return sqrt((point_a['x'] - point_b['x']) ** 2 + abs(point_a['y'] - point_b['y']) ** 2)
+
 
 class LOF:
-    """Helper class for performing LOF computations and instances normalization."""
-    def __init__(self, instances, normalize=True, distance_function=distance_euclidean):
-        self.instances = instances
-        self.normalize = normalize
-        self.distance_function = distance_function
-        if normalize:
-            self.normalize_instances()
+    # Distance Formulas
+    CONST_MANHATTAN = 'Manhattan'
+    CONST_EUCLIDEAN = 'Euclidean'
+    CONST_DISTANCE_FORMULAS = [CONST_MANHATTAN, CONST_EUCLIDEAN]
 
-    def compute_instance_attribute_bounds(self):
-        min_values = [float("inf")] * len(self.instances[0]) #n.ones(len(self.instances[0])) * n.inf
-        max_values = [float("-inf")] * len(self.instances[0]) #n.ones(len(self.instances[0])) * -1 * n.inf
-        for instance in self.instances:
-            min_values = tuple(map(lambda x,y: min(x,y), min_values,instance)) #n.minimum(min_values, instance)
-            max_values = tuple(map(lambda x,y: max(x,y), max_values,instance)) #n.maximum(max_values, instance)
+    # Ordered Dict Keys
+    LOF_KEY = 'local_outlier_factor'
+    LRD_KEY = 'local_reachability_distance'
+    DIST_KEY = 'k_nearest_nodes_distances'
 
-        diff = [dim_max - dim_min for dim_max, dim_min in zip(max_values, min_values)]
-        if not all(diff):
-            problematic_dimensions = ", ".join(str(i+1) for i, v in enumerate(diff) if v == 0)
-            warnings.warn("No data variation in dimensions: %s. You should check your data or disable normalization." % problematic_dimensions)
+    # Formatting Constants
+    CONST_ERROR = 'Error: '
 
-        self.max_attribute_values = max_values
-        self.min_attribute_values = min_values
+    def __init__(self, coordinates, distance_formula, k):
 
-    def normalize_instances(self):
-        """Normalizes the instances and stores the infromation for rescaling new instances."""
-        if not hasattr(self, "max_attribute_values"):
-            self.compute_instance_attribute_bounds()
-        new_instances = []
-        for instance in self.instances:
-            new_instances.append(self.normalize_instance(instance)) # (instance - min_values) / (max_values - min_values)
-        self.instances = new_instances
+        # set up
+        self.coordinates = self.get_coordinates_by_format(coordinates)
+        self.initial_check_data(k)
+        self.k = k
+        self.distance_formula = self.initial_check_distance_formula(distance_formula)
 
-    def normalize_instance(self, instance):
-        return tuple(map(lambda value,max,min: (value-min)/(max-min) if max-min > 0 else 0,
-                         instance, self.max_attribute_values, self.min_attribute_values))
+        # run it
+        self.write_initial_distance_calculations()
+        self.calculate_lof()
 
-    def local_outlier_factor(self, min_pts, instance):
-        """The (local) outlier factor of instance captures the degree to which we call instance an outlier.
-        min_pts is a parameter that is specifying a minimum number of instances to consider for computing LOF value.
-        Returns: local outlier factor
-        Signature: (int, (attr1, attr2, ...), ((attr_1_1, ...),(attr_2_1, ...), ...)) -> float"""
-        if self.normalize:
-            instance = self.normalize_instance(instance)
-        return local_outlier_factor(min_pts, instance, self.instances, distance_function=self.distance_function)
+    def get_coordinates_by_format(self, coordinates):
+        if isinstance(coordinates, OrderedDict):
+            return coordinates
+        elif isinstance(coordinates, str):
+            # do normal
+            coordinates_to_return = OrderedDict([])
+            with open(coordinates, newline='') as csv_file:
+                file = reader(csv_file, delimiter=',', quotechar='|')
+                for i, coord in enumerate(file):
+                    key = str('coord_' + str(i) + '_x_' + coord[0] + '_y_' + coord[1])
+                    coordinates_to_return[key] = OrderedDict([
+                        ('x', int(coord[0])),
+                        ('y', int(coord[1]))
+                    ])
+            return coordinates_to_return
 
-def k_distance(k, instance, instances, distance_function=distance_euclidean):
-    #TODO: implement caching
-    """Computes the k-distance of instance as defined in paper. It also gatheres the set of k-distance neighbours.
-    Returns: (k-distance, k-distance neighbours)
-    Signature: (int, (attr1, attr2, ...), ((attr_1_1, ...),(attr_2_1, ...), ...)) -> (float, ((attr_j_1, ...),(attr_k_1, ...), ...))"""
-    distances = {}
-    for instance2 in instances:
-        distance_value = distance_function(instance, instance2)
-        if distance_value in distances:
-            distances[distance_value].append(instance2)
+        elif isinstance(coordinates, list) and isinstance(coordinates[0], tuple):
+            coordinates_to_return = OrderedDict([])
+            for i, coord in enumerate(coordinates):
+                key = str('coord_' + str(i) + '_x_' + str(coord[0]) + '_y_' + str(coord[1]))
+                coordinates_to_return[key] = OrderedDict([
+                    ('x', int(coord[0])),
+                    ('y', int(coord[1]))
+                ])
+            return coordinates_to_return
+
+        elif isinstance(coordinates, list) and isinstance(coordinates[0], list) and len(coordinates) == 2 and len(
+                coordinates[0]) == len(coordinates[1]):
+            coordinates_to_return = OrderedDict([])
+            for i, coord in enumerate(coordinates[0]):
+                key = str('coord_' + str(i) + '_x_' + str(coord) + '_y_' + str(coordinates[1][i]))
+                coordinates_to_return[key] = OrderedDict([
+                    ('x', int(coord)),
+                    ('y', int(coordinates[1][i]))
+                ])
+            return coordinates_to_return
+
         else:
-            distances[distance_value] = [instance2]
-    distances = sorted(distances.items())
-    neighbours = []
-    [neighbours.extend(n[1]) for n in distances[:k]]
-    k_distance_value = distances[k - 1][0] if len(distances) >= k else distances[-1][0]
-    return k_distance_value, neighbours
+            print(self.CONST_ERROR + 'Invalid coordinates data type')
+            exit()
 
-def reachability_distance(k, instance1, instance2, instances, distance_function=distance_euclidean):
-    """The reachability distance of instance1 with respect to instance2.
-    Returns: reachability distance
-    Signature: (int, (attr_1_1, ...),(attr_2_1, ...)) -> float"""
-    (k_distance_value, neighbours) = k_distance(k, instance2, instances, distance_function=distance_function)
-    return max([k_distance_value, distance_function(instance1, instance2)])
+    def write_initial_distance_calculations(self):
+        for combo in combinations(self.coordinates, 2):
+            distance = self.get_distance(self.coordinates[combo[0]], self.coordinates[combo[1]])
+            self.write_distance(combo[0], combo[1], distance)
+            self.write_distance(combo[1], combo[0], distance)
 
-def local_reachability_density(min_pts, instance, instances, **kwargs):
-    """Local reachability density of instance is the inverse of the average reachability
-    distance based on the min_pts-nearest neighbors of instance.
-    Returns: local reachability density
-    Signature: (int, (attr1, attr2, ...), ((attr_1_1, ...),(attr_2_1, ...), ...)) -> float"""
-    (k_distance_value, neighbours) = k_distance(min_pts, instance, instances, **kwargs)
-    reachability_distances_array = [0]*len(neighbours) #n.zeros(len(neighbours))
-    for i, neighbour in enumerate(neighbours):
-        reachability_distances_array[i] = reachability_distance(min_pts, instance, neighbour, instances, **kwargs)
-    if not any(reachability_distances_array):
-        warnings.warn("Instance %s (could be normalized) is identical to all the neighbors. Setting local reachability density to inf." % repr(instance))
-        return float("inf")
-    else:
-        return len(neighbours) / sum(reachability_distances_array)
+    def initial_check_data(self, k):
+        if k >= len(self.coordinates):
+            print(self.CONST_ERROR + 'K value is greater than or equal to number of given coordinates')
+            exit()
+        elif k == 0:
+            print(self.CONST_ERROR + 'K value is zero. Do not do that')
+            exit()
+        else:
+            pass
 
-def local_outlier_factor(min_pts, instance, instances, **kwargs):
-    """The (local) outlier factor of instance captures the degree to which we call instance an outlier.
-    min_pts is a parameter that is specifying a minimum number of instances to consider for computing LOF value.
-    Returns: local outlier factor
-    Signature: (int, (attr1, attr2, ...), ((attr_1_1, ...),(attr_2_1, ...), ...)) -> float"""
-    (k_distance_value, neighbours) = k_distance(min_pts, instance, instances, **kwargs)
-    instance_lrd = local_reachability_density(min_pts, instance, instances, **kwargs)
-    lrd_ratios_array = [0]* len(neighbours)
-    for i, neighbour in enumerate(neighbours):
-        instances_without_instance = set(instances)
-        instances_without_instance.discard(neighbour)
-        neighbour_lrd = local_reachability_density(min_pts, neighbour, instances_without_instance, **kwargs)
-        lrd_ratios_array[i] = neighbour_lrd / instance_lrd
-    return sum(lrd_ratios_array) / len(neighbours)
+    def initial_check_distance_formula(self, distance_formula):
+        if distance_formula in self.CONST_DISTANCE_FORMULAS:
+            return distance_formula
+        else:
+            return self.CONST_MANHATTAN
 
-def outliers(k, instances, **kwargs):
-    """Simple procedure to identify outliers in the dataset."""
-    instances_value_backup = instances
-    outliers = []
-    for i, instance in enumerate(instances_value_backup):
-        instances = list(instances_value_backup)
-        instances.remove(instance)
-        l = LOF(instances, **kwargs)
-        value = l.local_outlier_factor(k, instance)
-        if value > 1:
-            outliers.append({"lof": value, "instance": instance, "index": i})
-    outliers.sort(key=lambda o: o["lof"], reverse=True)
-    return outliers
+    def calculate_lof(self):
+        for coordinate in self.coordinates:
+            neighbors = self.coordinates[coordinate][self.DIST_KEY]
+            k_nearest_set_count = len(self.coordinates[coordinate][self.DIST_KEY])
+            reach_distances_sum = 0
+            for neighbor in neighbors:
+                reach_distances_sum += self.get_reach_distance(neighbor, coordinate)
+
+            l_r_d_sum = 0
+            for neighbor in neighbors:
+                l_r_d_sum += self.get_local_reachability_distance(neighbor)
+
+            self.coordinates[coordinate][self.LOF_KEY] = (reach_distances_sum * l_r_d_sum) / k_nearest_set_count ** 2
+
+    def get_reach_distance(self, coordinate_one, coordinate_two):
+        k_nearest_neighbor = list(self.coordinates[coordinate_one][self.DIST_KEY].keys())[self.k - 1]
+        k_nearest_neighbor_value = self.coordinates[coordinate_one][self.DIST_KEY][k_nearest_neighbor]
+
+        return max(k_nearest_neighbor_value,
+                   self.get_distance(self.coordinates[coordinate_one], self.coordinates[coordinate_two]))
+
+    def get_local_reachability_distance(self, coordinate):
+        neighbors = self.coordinates[coordinate][self.DIST_KEY]
+        reach_distance_sum = 0
+        for neighbor in neighbors:
+            reach_distance_sum = reach_distance_sum + self.get_reach_distance(neighbor, coordinate)
+
+        l_r_d = len(self.coordinates[coordinate][self.DIST_KEY]) / reach_distance_sum
+
+        self.coordinates[coordinate][self.LRD_KEY] = l_r_d
+
+        return l_r_d
+
+    def write_distance(self, key_1, key_2, distance):
+        if self.DIST_KEY in self.coordinates[key_1]:
+            if len(self.coordinates[key_1][self.DIST_KEY]) == self.k:
+                if distance > list(self.coordinates[key_1][self.DIST_KEY].values())[0]:
+                    return
+                else:
+                    self.coordinates[key_1][self.DIST_KEY][key_2] = distance
+                    temp_ordered_dict_sorted = OrderedDict(
+                        sorted(self.coordinates[key_1][self.DIST_KEY].items(), key=lambda x: x[1]))
+                    self.coordinates[key_1][self.DIST_KEY] = OrderedDict(
+                        islice(temp_ordered_dict_sorted.items(), self.k))
+                    return
+            else:
+                if key_2 in self.coordinates[key_1][self.DIST_KEY]:
+                    self.coordinates[key_1][self.DIST_KEY][key_2] = distance
+                    self.coordinates[key_1][self.DIST_KEY] = \
+                        OrderedDict(sorted(self.coordinates[key_1][self.DIST_KEY].items(), key=lambda x: x[1]))
+                else:
+                    self.coordinates[key_1][self.DIST_KEY][key_2] = distance
+                    self.coordinates[key_1][self.DIST_KEY] = \
+                        OrderedDict(sorted(self.coordinates[key_1][self.DIST_KEY].items(), key=lambda x: x[1]))
+        else:
+            self.coordinates[key_1][self.DIST_KEY] = {}
+            self.write_distance(key_1, key_2, distance)
+
+    def get_unique_pairs(self):
+        return combinations(self.coordinates, 2)
+
+    def get_distance(self, point_a, point_b):
+        if self.distance_formula == self.CONST_MANHATTAN:
+            return get_manhattan_distance(point_a, point_b)
+        elif self.distance_formula == self.CONST_EUCLIDEAN:
+            return get_euclidean_distance(point_a, point_b)
+
+    def print_all_data(self, tab=4):
+        print('===All Data For Each Coordinate===')
+        print(dumps(self.coordinates, indent=tab))
+
+    def get_all_data(self):
+        return self.coordinates
+
+    def print_all_lof(self):
+        print('===All Local Outlier Factors for Each Coordinate===')
+        for coordinate in self.coordinates:
+            print(coordinate + ': ' + str(self.coordinates[coordinate][self.LOF_KEY]))
+
+    def get_all_lof(self):
+        lofs = []
+        for coordinate in self.coordinates:
+            lofs.append((coordinate, self.coordinates[coordinate][self.LOF_KEY]))
+        return lofs
+
+    def print_lof_sorted_filtered(self, reverse_order=False, filter_value_greater_than=None,
+                                  filter_value_less_than=None):
+        print('===Local Outlier Factor Distances Sorted and Filtered===')
+        for coordinate in self.get_lof_sorted_filtered(reverse_order, filter_value_greater_than, filter_value_less_than):
+            print(coordinate[0] + ': ' + str(coordinate[1]))
+
+    def get_lof_sorted_filtered(self, reverse_order=False, filter_value_greater_than=None,
+                                filter_value_less_than=None):
+        if (filter_value_less_than is not None and filter_value_greater_than is not None) and \
+                filter_value_greater_than > filter_value_less_than:
+            print(self.CONST_ERROR + 'Cannot filter for values greater than ' + filter_value_greater_than +
+                  ' and less than ' + filter_value_less_than)
+            return []
+
+        if filter_value_less_than is None:
+            filter_value_less_than = inf
+
+        if filter_value_greater_than is None:
+            filter_value_greater_than = -inf
+
+        local_outlier_factors = []
+        for coordinate in self.coordinates:
+            coordinate_value = self.coordinates[coordinate][self.LOF_KEY]
+            if filter_value_greater_than < coordinate_value < filter_value_less_than:
+                local_outlier_factors.append((coordinate, coordinate_value))
+
+        local_outlier_factors.sort(key=lambda tup: tup[1], reverse=reverse_order)
+
+        lofs = []
+        for coordinate in local_outlier_factors:
+            lofs.append((coordinate[0], coordinate[1]))
+
+        return lofs

@@ -11,12 +11,9 @@ import sys
 import pandas as pd
 import numpy as np
 
-# temporary solution for relative imports in case pyod is not installed
-# if pyod is installed, no need to use the following line
+
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname("__file__"), '..')))
-
-from AlgoritmiFunzionanti.lof import outliers
 
 from pandas import DataFrame
 def DBFittizzio():
@@ -32,9 +29,9 @@ def DBFittizzio():
 
 
 
-'''dfMappe = pd.read_csv('catastopassicarraichiaiasanferdinandoposillipo.csv', error_bad_lines=False, sep=';', encoding="ISO-8859-1")
 
-dfVariazioni = pd.read_csv('2018-Variazioni-Delibere.csv', error_bad_lines=False, sep=';')'''
+
+'''dfVariazioni = pd.read_csv('2018-Variazioni-Delibere.csv', error_bad_lines=False, sep=';')'''
 
 '''for i,row in  df.iterrows():
     row['Concept']=str(row['Concept'])
@@ -46,26 +43,34 @@ df['ValoriNumerici']=df['Concept'].astype(np.int64)'''
 
 
 
+def dbMappe():
+    dfMappe = pd.read_csv('catastopassicarraichiaiasanferdinandoposillipo.csv', error_bad_lines=False, sep=';',encoding="ISO-8859-1")
+    instances= dfMappe.iloc[:,4].values.reshape(-1,1)
+    from sklearn.neighbors import LocalOutlierFactor
+    clf = LocalOutlierFactor(n_neighbors=22, contamination=0.001)
+    y=clf.fit_predict(instances)
+    dfMappe['ValoriLOF'] = y
+    '''with open('your_file.txt', 'w') as f:
+        for item in y.tolist():
+            f.write("%s," % item)'''
+    return y
 
-'''instances= dfVariazioni.iloc[:,6].values.reshape(-1,1)
-from sklearn.neighbors import LocalOutlierFactor
-clf = LocalOutlierFactor(n_neighbors=100, contamination=0.01)
-# use fit_predict to compute the predicted labels of the training samples
-# (when LOF is used for outlier detection, the stimator has no predict,
-# decision_function and score_samples methods).
-dfVariazioni['ValoriLOF'] = clf.fit_predict(instances)
 
-dfDate = pd.read_csv('sparqlBirthDate', error_bad_lines=False)
-for i, row in dfDate.iterrows():
-    row['Concept'] = str(row['Concept'])
-for i, row in dfDate.iterrows():
-    row['Concept']=row['Concept'].replace("-", "")
+def dbDate():
+    dfDate = pd.read_csv('sparqlBirthDate', error_bad_lines=False)
+    for i, row in dfDate.iterrows():
+        row['Concept'] = str(row['Concept'])
+    for i, row in dfDate.iterrows():
+        row['Concept']=row['Concept'].replace("-", "")
 
-dfDate['ValoriNumerici']=dfDate['Concept'].astype(np.int64)
-instances= dfDate.iloc[:,0].values.reshape(-1,1)
-clf = LocalOutlierFactor(n_neighbors=200, contamination=0.01)
-# use fit_predict to compute the predicted labels of the training samples
-# (when LOF is used for outlier detection, the stimator has no predict,
-# decision_function and score_samples methods).
-dfDate['ValoriLOF'] = clf.fit_predict(instances)'''
+    dfDate['ValoriNumerici']=dfDate['Concept'].astype(np.int64)
+    instances= dfDate.iloc[:,0].values.reshape(-1,1)
+    from sklearn.neighbors import LocalOutlierFactor
+    clf = LocalOutlierFactor(n_neighbors=200, contamination=0.01)
+    y=clf.fit_predict(instances)
+    dfDate['ValoriLOF'] = y
+    '''with open('your_file.txt', 'w') as f:
+           for item in y.tolist():
+               f.write("%s," % item)'''
+    return y
 
