@@ -25,32 +25,40 @@ Cars = {'Brand': ['m','n','o','p','a','b','c','d','e','f','g','h','i','l'],
 
 df = DataFrame(Cars,columns= ['Brand', 'Price'])
 print(df)
-X= df.iloc[:,4].values.reshape(-1,1)
-'''y_truth=dataset.iloc[:,4].values.reshape(-1,1)'''
 
-norm_data=MinMaxScaler()
-X=norm_data.fit_transform(X)
+def dbSCan(epsilon,df,column):
+    X= df.iloc[:,column].values.reshape(-1,1)
 
 
-norm_data=MinMaxScaler()
-X=norm_data.fit_transform(X)
+    norm_data=MinMaxScaler()
+    X=norm_data.fit_transform(X)
 
-dbscan=DBSCAN(eps=0.00767337396,min_samples=5)
 
-y=dbscan.fit_predict(X)
-print(y)
-cluster_labels=np.unique(y)
-df['labels']=y
-cluster=[]
-for index in range (0,len(cluster_labels)):
-    lista=[]
-    cluster.append(lista)
+    norm_data=MinMaxScaler()
+    X=norm_data.fit_transform(X)
 
-for index in range (0,len(X)):
-    cluster[y[index]].append(X[index])
+    dbscan=DBSCAN(eps=epsilon,min_samples=5)
 
-print("labels:",cluster_labels)
-print("elementi",len(cluster[-1]))
+    y=dbscan.fit_predict(X)
+    print(y)
+    cluster_labels=np.unique(y)
+    df['labels']=y
+    cluster=[]
+    for index in range (0,len(cluster_labels)):
+        lista=[]
+        cluster.append(lista)
 
+    for index in range (0,len(X)):
+        cluster[y[index]].append(X[index])
+    my_list=list()
+    for i, row in df.iterrows():
+        if row['labels']==-1:
+           # print(i, row['Price'])
+            my_list.append(i)
+
+    print("labels:",cluster_labels)
+    print("elementi",len(cluster[-1]))
+
+    return my_list
 
 

@@ -14,6 +14,7 @@ dataset=dataset.copy()
 dataset=dataset.dropna()
 from pandas import DataFrame
 
+dfVariazioni = pd.read_csv('2018-Variazioni-Delibere.csv', error_bad_lines=False, sep=';')
 Cars = {
     'Brand': ['Honda Civic', 'Toyota Corolla', 'Ford Focus', 'Audi A4', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
               'l'],
@@ -45,7 +46,7 @@ def outliers_modified_z_score(ys,df,threshold):
             my_list.append(i)
     return my_list
 
-outlier_datapoints = outliers_modified_z_score(df["Price"], df, 4)
+outlier_datapoints = outliers_modified_z_score(dfVariazioni["Unita'OrganizzativaDirigenziale"], dfVariazioni, 70000)
 print(outlier_datapoints)
 
 

@@ -15,7 +15,7 @@ import os
 cwd = os.getcwd()  # Get the current working directory (cwd)
 files = os.listdir(cwd)  # Get all the files in that directory
 print("Files in '%s': %s" % (cwd, files))
-df = pd.read_csv('catastopassicarraichiaiasanferdinandoposillipo.csv',error_bad_lines=False,sep=";",encoding="ISO-8859-1")
+df = pd.read_csv('2018-Variazioni-Delibere.csv',error_bad_lines=False,sep=";")
 
 '''for i,row in  df.iterrows():
         row['Concept']=str(row['Concept'])
@@ -31,7 +31,7 @@ Cars = {'Brand': ['Honda Civic','Toyota Corolla','Ford Focus','Audi A4','a','b',
         }
 
 df = DataFrame(Cars,columns= ['Brand', 'Price'])'''
-X= df.iloc[:,4].values.reshape(-1,1)
+X= df.iloc[:, 6].values.reshape(-1, 1)
 
 '''y_truth=dataset.iloc[:,4].values.reshape(-1,1)'''
 

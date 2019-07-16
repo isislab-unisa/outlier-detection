@@ -53,11 +53,12 @@ def dbMappe(contamination):
     from sklearn.neighbors import LocalOutlierFactor
     clf = LocalOutlierFactor(metric='euclidean',contamination=contamination)
     y=clf.fit_predict(instances)
+    my_list=list()
     dfMappe['ValoriLOF'] = y
-    for i,row in dfMappe.iterrows():
-        if row['ValoriLOF']==-1:
-            print(i, row['Longitudine'])
-    return dfMappe
+    for i, row in dfMappe.iterrows():
+        if row['ValoriLOF'] == -1:
+            my_list.append(i)
+    return my_list
 
 
 def dbDate(contamination):
@@ -102,7 +103,9 @@ def dbDatasetVariazioniDelibere(contamination):
     clf = LocalOutlierFactor(metric="euclidean", contamination=contamination)
     y = clf.fit_predict(instances)
     dfVariazioni['ValoriLOF'] = y
+    myList=list()
     for i, row in dfVariazioni.iterrows():
         if row['ValoriLOF'] == -1:
             print(i, row["Unita'OrganizzativaDirigenziale"])
-    return dfVariazioni
+            myList.append(i)
+    return myList

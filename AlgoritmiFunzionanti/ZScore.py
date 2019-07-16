@@ -40,7 +40,6 @@ def outliers_z_score(ys,df,threshold):
     my_list = list()
     for i, row in df.iterrows():
         if row['Z-Scores'] > threshold or row['Z-Scores'] < -threshold:
-            print(i, row['Price'])
             my_list.append(i)
     return my_list
 
