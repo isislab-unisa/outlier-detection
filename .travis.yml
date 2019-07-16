@@ -7,6 +7,6 @@
     - "export PYTHONPATH=$PYTHONPATH:$(pwd)"
   install:
     - pip install -r requirements.txt
-  script: python Test/TestLOF.py
+  script: python Test/TestAlgoritmi.py
 
 
