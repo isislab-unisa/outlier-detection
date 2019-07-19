@@ -13,7 +13,7 @@ Cars = {
 }
 df = DataFrame(Cars, columns=['Brand', 'Price'])
 
-
+dfBellezza = pd.read_csv('datasetBellezza.csv', error_bad_lines=False, sep=';')
 
 dfVariazioni = pd.read_csv('2018-Variazioni-Delibere.csv', error_bad_lines=False, sep=';')
 
@@ -53,4 +53,12 @@ class TestLOF(unittest.TestCase) :
         self.assertListEqual(DBScan.dbSCan(0.00043327556326473135, dfVariazioni, 6), myList)
 
 
-    
+
+    def testDatasetBellezza(self):
+        myList=[0,1,6]
+        #self.assertListEqual(zs.outliers_z_score(dfBellezza["Importo"], dfBellezza, 6), myList)
+        #self.assertListEqual(lf.dbDatasetVariazioniDelibere(0.0026), myList)  # LOF
+        #self.assertListEqual(ModifiedZScore.outliers_modified_z_score(dfBellezza["Importo"], dfBellezza,70000), myList)
+        #self.assertListEqual(DBScan.dbSCan(0.00043327556326473135, dfBellezza, 6), myList)'''
+
+

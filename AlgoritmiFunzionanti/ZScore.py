@@ -9,7 +9,7 @@ titanic['age'].plot.hist(
   title = "Histogram of the age variable"
 )
 from scipy.stats import zscore
-dataset = pd.read_csv('catastopassicarraichiaiasanferdinandoposillipo.csv',error_bad_lines=False,sep=";",encoding="ISO-8859-1")
+dataset = pd.read_csv('datasetBellezza.csv',error_bad_lines=False,sep=";")
 
 
 
@@ -43,7 +43,7 @@ def outliers_z_score(ys,df,threshold):
             my_list.append(i)
     return my_list
 
-outlier_datapoints = outliers_z_score(df["Price"],df,1.5)
+outlier_datapoints = outliers_z_score(dataset["Importo"],dataset,1)
 #outlier_datapoints2 = outliers_z_score(df2["Price"],df2,1.5)
 #outlier_datapoints3=outliers_z_score(dataset["Longitudine"],dataset,3)
 print(outlier_datapoints)
