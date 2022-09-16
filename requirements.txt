@@ -10,7 +10,7 @@ ipython-genutils==0.2.0
 jedi==0.14.0
 joblib==0.13.2
 kiwisolver==1.1.0
-Mako==1.0.13
+Mako==1.2.2
 MarkupSafe==1.1.1
 matplotlib==3.1.0
 numpy==1.16.4
